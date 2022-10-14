@@ -44,6 +44,7 @@ cc_library(
 		'src/factory/FileTaskImpl.cc',
 		'src/factory/WFGraphTask.cc',
 		'src/factory/WFResourcePool.cc',
+		'src/factory/WFMessageQueue.cc',
 		'src/factory/WFTaskFactory.cc',
 		'src/factory/Workflow.cc',
 		'src/manager/DnsCache.cc',
