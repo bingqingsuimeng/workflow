@@ -124,6 +124,7 @@ public:
 
 	// Internal usage only
 public:
+	static bool is_scheduler_created();
 	static class CommScheduler *get_scheduler();
 	static class ExecQueue *get_exec_queue(const std::string& queue_name);
 	static class Executor *get_compute_executor();
