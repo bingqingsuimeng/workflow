@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Test the server. */
-	auto&& create = [&scheme, port](WFRepeaterTask *)->SubTask *{
+	auto&& create = [port](WFRepeaterTask *)->SubTask *{
 		char buf[1024];
 		*buf = '\0';
 		printf("Input file name: (Ctrl-D to exit): ");
