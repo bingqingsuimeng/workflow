@@ -217,8 +217,6 @@ bool ComplexRedisTask::need_redirect()
 
 			return true;
 		}
-
-		return false;
 	}
 
 	return false;
