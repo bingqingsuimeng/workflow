@@ -9,8 +9,6 @@ add_packages("gtest")
 add_links("crypto")
 add_links("gtest_main")
 
-add_includedirs(get_config("workflow_inc"))
-
 if not is_os("macosx") then
     add_ldflags("-lrt")
 end

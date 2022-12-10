@@ -7,8 +7,6 @@ end
 
 add_links("crypto")
 
-add_includedirs(get_config("workflow_inc"))
-
 function all_examples()
     local res = {}
     for _, x in ipairs(os.files("*.cc")) do
