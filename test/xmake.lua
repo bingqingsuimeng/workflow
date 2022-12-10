@@ -7,7 +7,6 @@ add_deps("workflow")
 
 add_packages("gtest")
 add_links("crypto")
-add_links("ssl")
 add_links("gtest_main")
 
 add_includedirs(get_config("workflow_inc"))

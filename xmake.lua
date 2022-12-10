@@ -61,7 +61,7 @@ option("type")
     set_description("build lib static/shared")
 option_end()
 
-add_requires("openssl")
+add_requires("crypto")
 add_syslinks("pthread")
 
 if (get_config("kafka") == true) then

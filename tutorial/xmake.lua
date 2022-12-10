@@ -6,7 +6,6 @@ if not is_os("macosx") then
 end
 
 add_links("crypto")
-add_links("ssl")
 
 add_includedirs(get_config("workflow_inc"))
 
