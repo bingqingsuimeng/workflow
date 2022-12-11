@@ -46,6 +46,8 @@ struct poller_data
 	int fd;
 	union
 	{
+		poller_message_t *(*create_message)(void *);
+		int (*partial_written)(size_t, void *);
 		void *(*accept)(const struct sockaddr *, socklen_t, int, void *);
 		void *(*event)(void *);
 		void *(*notify)(void *, void *);
@@ -76,8 +78,6 @@ struct poller_result
 struct poller_params
 {
 	size_t max_open_files;
-	poller_message_t *(*create_message)(void *);
-	int (*partial_written)(size_t, void *);
 	void (*callback)(struct poller_result *, void *);
 	void *context;
 };

@@ -64,8 +64,6 @@ struct __poller_node
 struct __poller
 {
 	size_t max_open_files;
-	poller_message_t *(*create_message)(void *);
-	int (*partial_written)(size_t, void *);
 	void (*cb)(struct poller_result *, void *);
 	void *ctx;
 
@@ -346,7 +344,7 @@ static int __poller_append_message(const void *buf, size_t *n,
 		if (!res)
 			return -1;
 
-		msg = poller->create_message(node->data.context);
+		msg = node->data.create_message(node->data.context);
 		if (!msg)
 		{
 			free(res);
@@ -481,7 +479,7 @@ static void __poller_handle_write(struct __poller_node *node,
 		if (count == 0)
 			return;
 
-		if (poller->partial_written(count, node->data.context) >= 0)
+		if (node->data.partial_written(count, node->data.context) >= 0)
 			return;
 	}
 
@@ -921,8 +919,6 @@ poller_t *__poller_create(void **nodes_buf, const struct poller_params *params)
 			{
 				poller->nodes = (struct __poller_node **)nodes_buf;
 				poller->max_open_files = params->max_open_files;
-				poller->create_message = params->create_message;
-				poller->partial_written = params->partial_written;
 				poller->cb = params->callback;
 				poller->ctx = params->context;
 
