@@ -5,8 +5,6 @@ if not is_os("macosx") then
     add_ldflags("-lrt")
 end
 
-add_links("crypto")
-
 function all_examples()
     local res = {}
     for _, x in ipairs(os.files("*.cc")) do

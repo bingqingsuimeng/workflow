@@ -1,7 +1,5 @@
 includes("**/xmake.lua")
 
-add_links("crypto")
-
 target("workflow")
     if (get_config("type") == "static") then
         set_kind("static")
