@@ -26,6 +26,7 @@ cc_library(
 		'src/kernel/thrdpool.c',
 		'src/util/crc32c.c',
 		'src/util/json_parser.c',
+		'src/util/sha1.c',
 	],
 	hdrs = glob(['src/*/*.h']) + glob(['src/*/*.inl']),
 	includes = [
