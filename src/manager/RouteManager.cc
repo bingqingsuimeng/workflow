@@ -453,12 +453,7 @@ int RouteManager::get(TransportType type,
 		struct RouteParams params = {
 			.transport_type			=	type,
 			.addrinfo 				= 	addrinfo,
-<<<<<<< HEAD
-			.md5_64					=	md5_64,
-=======
 			.sha1_64				=	sha1_64,
-			.ssl_ctx 				=	ssl_ctx,
->>>>>>> 0de8092f39aba718f086279839c0a1d320f3a313
 			.connect_timeout		=	endpoint_params->connect_timeout,
 			.response_timeout		=	endpoint_params->response_timeout,
 			.max_connections		=	endpoint_params->max_connections,

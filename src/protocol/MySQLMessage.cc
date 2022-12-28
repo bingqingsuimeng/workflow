@@ -23,6 +23,7 @@
 #include <errno.h>
 #include <string>
 #include <utility>
+#include "sha1.h"
 #include "mysql_byteorder.h"
 #include "mysql_types.h"
 #include "MySQLResult.h"
