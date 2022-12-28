@@ -16,11 +16,6 @@
   Authors: Wu Jiaxu (wujiaxu@sogou-inc.com)
 */
 
-<<<<<<< HEAD
-#include <openssl/md5.h>
-=======
-#include <openssl/ssl.h>
->>>>>>> 0de8092f39aba718f086279839c0a1d320f3a313
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -88,12 +83,7 @@ struct RouteParams
 {
 	TransportType transport_type;
 	const struct addrinfo *addrinfo;
-<<<<<<< HEAD
-	uint64_t md5_64;
-=======
 	uint64_t sha1_64;
-	SSL_CTX *ssl_ctx;
->>>>>>> 0de8092f39aba718f086279839c0a1d320f3a313
 	int connect_timeout;
 	int response_timeout;
 	size_t max_connections;
