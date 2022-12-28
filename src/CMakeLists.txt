@@ -68,9 +68,9 @@ add_library(
 )
 
 if(ANDROID)
-	target_link_libraries(${SHARED_LIB_NAME} crypto c)
+	target_link_libraries(${SHARED_LIB_NAME} c)
 else()
-	target_link_libraries(${SHARED_LIB_NAME} OpenSSL::Crypto pthread)
+	target_link_libraries(${SHARED_LIB_NAME} pthread)
 endif()
 
 set_target_properties(${STATIC_LIB_NAME} PROPERTIES OUTPUT_NAME ${PROJECT_NAME})

@@ -13,7 +13,6 @@ cc_library(
 	visibility = ["//visibility:public"],
 	linkopts = [
 		'-lpthread',
-		'-lcrypto',
 	],
 )
 cc_library(

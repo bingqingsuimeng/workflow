@@ -47,11 +47,11 @@ set(TUTORIAL_LIST
 )
 
 if (APPLE)
-	set(WORKFLOW_LIB workflow pthread OpenSSL::Crypto)
+	set(WORKFLOW_LIB workflow pthread)
 elseif (ANDROID)
-	set(WORKFLOW_LIB workflow crypto c)
+	set(WORKFLOW_LIB workflow c)
 else ()
-	set(WORKFLOW_LIB workflow pthread OpenSSL::Crypto ${LIBRT})
+	set(WORKFLOW_LIB workflow pthread ${LIBRT})
 endif ()
 
 foreach(src ${TUTORIAL_LIST})
