@@ -423,7 +423,7 @@ int RouteManager::get(TransportType type,
 					  RouteResult& result)
 {
 	uint64_t sha1_64 = __generate_key(type, addrinfo, other_info,
-									 endpoint_params, hostname);
+									  endpoint_params, hostname);
 	struct rb_node **p = &cache_.rb_node;
 	struct rb_node *parent = NULL;
 	RouteResultEntry *bound = NULL;
