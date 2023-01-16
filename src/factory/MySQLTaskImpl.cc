@@ -57,7 +57,8 @@ private:
 	std::string db_;
 	std::string res_charset_;
 	short character_set_;
-	bool succ_;
+	short state_;
+	int error_;
 	bool is_user_request_;
 
 public:
@@ -124,7 +125,6 @@ CommMessageOut *ComplexMySQLTask::message_out()
 
 	if (req)
 	{
-		succ_ = false;
 		is_user_request_ = false;
 		return req;
 	}
@@ -176,7 +176,6 @@ int ComplexMySQLTask::keep_alive_timeout()
 		if (resp->host_disallowed())
 		{
 			this->resp = std::move(*static_cast<MySQLResponse *>(resp));
-			succ_ = false;
 			return 0;
 		}
 		else
@@ -189,18 +188,17 @@ int ComplexMySQLTask::keep_alive_timeout()
 			conn->set_context(ctx, [](void *ctx) {
 				delete static_cast<handshake_ctx *>(ctx);
 			});
-
-			succ_ = true;
 		}
 	}
 	else if (!is_user_request_)
 	{
-		auto *resp = static_cast<MySQLResponse *>(this->get_message_in());
+		auto *resp = (MySQLResponse *)this->get_message_in();
 
-		succ_ = resp->is_ok_packet();
-		if (!succ_)
+		if (!resp->is_ok_packet())
 		{
 			this->resp = std::move(*resp);
+			state_ = WFT_STATE_TASK_ERROR;
+			error_ = WFT_ERR_MYSQL_INVALID_CHARACTER_SET;
 			return 0;
 		}
 	}
@@ -415,25 +413,17 @@ bool ComplexMySQLTask::finish_once()
 {
 	if (!is_user_request_)
 	{
-		is_user_request_ = true;
 		delete this->get_message_out();
 		delete this->get_message_in();
 
-		if (this->state == WFT_STATE_SUCCESS && !succ_)
+		if (this->state == WFT_STATE_SUCCESS && state_ != WFT_STATE_SUCCESS)
 		{
-			long long seqid = this->get_seq();
-
-			if (seqid == 0)
-				this->error = WFT_ERR_MYSQL_HOST_NOT_ALLOWED;
-			else if (seqid == 1)
-				this->error = WFT_ERR_MYSQL_ACCESS_DENIED;
-			else
-				this->error = WFT_ERR_MYSQL_INVALID_CHARACTER_SET;
-
+			this->state = state_;
+			this->error = error_;
 			this->disable_retry();
-			this->state = WFT_STATE_TASK_ERROR;
 		}
 
+		is_user_request_ = true;
 		return false;
 	}
 
