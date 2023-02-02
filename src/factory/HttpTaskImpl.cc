@@ -111,7 +111,7 @@ CommMessageOut *ComplexHttpTask::message_out()
 			header.value = "close";
 			header.value_len = strlen("close");
 		}
-	
+
 		req->add_header(&header);
 	}
 

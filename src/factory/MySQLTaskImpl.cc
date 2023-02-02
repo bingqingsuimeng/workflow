@@ -20,6 +20,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 #include <string>
 #include <unordered_map>
 #include "WFTaskError.h"
@@ -35,12 +36,6 @@ using namespace protocol;
 
 /**********Client**********/
 
-struct handshake_ctx
-{
-	char challenge[20];
-	unsigned char mysql_seqid;
-};
-
 class ComplexMySQLTask : public WFComplexClientTask<MySQLRequest, MySQLResponse>
 {
 protected:
@@ -50,6 +45,39 @@ protected:
 	virtual int keep_alive_timeout();
 	virtual bool init_success();
 	virtual bool finish_once();
+
+protected:
+	virtual WFConnection *get_connection() const
+	{
+		WFConnection *conn = this->WFComplexClientTask::get_connection();
+
+		if (conn)
+		{
+			void *ctx = conn->get_context();
+			if (ctx)
+				conn = (WFConnection *)ctx;
+		}
+
+		return conn;
+	}
+
+private:
+	enum ConnState
+	{
+		ST_AUTH_REQUEST,
+		ST_CHARSET_REQUEST,
+		ST_FIRST_USER_REQUEST,
+		ST_USER_REQUEST
+	};
+
+	struct MyConnection : public WFConnection
+	{
+		char challenge[20];
+		unsigned char mysql_seqid;
+		enum ConnState state;
+	};
+
+	int check_handshake();
 
 private:
 	std::string username_;
@@ -97,103 +125,145 @@ bool ComplexMySQLTask::check_request()
 
 CommMessageOut *ComplexMySQLTask::message_out()
 {
-	long long seqid = this->get_seq();
+	MySQLAuthRequest *auth_req;
 	MySQLRequest *req;
 
-	if (seqid == 0)
-		req = new MySQLHandshakeRequest;
-	else if (seqid == 1)
-	{
-		auto *auth_req = new MySQLAuthRequest;
-		auto *conn = this->get_connection();
-		auto *ctx = static_cast<handshake_ctx *>(conn->get_context());
+	is_user_request_ = false;
+	if (this->get_seq() == 0)
+		return new MySQLHandshakeRequest;
 
-		auth_req->set_seqid(ctx->mysql_seqid);
-		auth_req->set_challenge(ctx->challenge);
-		delete ctx;
-		conn->set_context(NULL, nullptr);
-		auth_req->set_auth(username_, password_, db_, character_set_);
-		req = auth_req;
-	}
-	else if (seqid == 2 && res_charset_.size() != 0)
+	auto *conn = (MyConnection *)this->get_connection();
+	switch (conn->state)
 	{
+	case ST_AUTH_REQUEST:
+		req = new MySQLAuthRequest;
+		auth_req = (MySQLAuthRequest *)req;
+		auth_req->set_challenge(conn->challenge);
+		auth_req->set_auth(username_, password_, db_, character_set_);
+		req->set_seqid(conn->mysql_seqid++);
+		break;
+
+	case ST_CHARSET_REQUEST:
 		req = new MySQLRequest;
 		req->set_query("SET NAMES " + res_charset_);
-	}
-	else
-		req = NULL;
+		break;
 
-	if (req)
-	{
-		is_user_request_ = false;
-		return req;
-	}
-
-	is_user_request_ = true;
-	if (this->is_fixed_addr())
-	{
-		auto *target = static_cast<RouteManager::RouteTarget *>(this->get_target());
-
-		/* If it's a transaction task, generate a ECONNRESET error when
-		 * the target was reconnected. */
-		if (seqid <= 3 && (seqid == 2 || res_charset_.size() != 0))
+	case ST_FIRST_USER_REQUEST:
+		if (this->is_fixed_addr())
 		{
+			auto *target = (RouteManager::RouteTarget *)this->get_target();
+
+			/* If it's a transaction task, generate a ECONNRESET error when
+			 * the target was reconnected. */
 			if (target->state)
 			{
 				errno = ECONNRESET;
 				return NULL;
 			}
-			else
-				target->state = 1;
+
+			target->state = 1;
 		}
+
+	case ST_USER_REQUEST:
+		is_user_request_ = true;
+		req = (MySQLRequest *)this->WFComplexClientTask::message_out();
+		break;
+
+	default:
+		assert(0);
+		return NULL;
 	}
 
-	return this->WFClientTask::message_out();
+	return req;
 }
 
 CommMessageIn *ComplexMySQLTask::message_in()
 {
-	long long seqid = this->get_seq();
+	MySQLResponse *resp;
 
-	if (seqid == 0)
+	if (this->get_seq() == 0)
 		return new MySQLHandshakeResponse;
-	else if (seqid == 1)
-		return new MySQLAuthResponse;
-	else if (seqid == 2 && !is_user_request_)
-		return new MySQLResponse;
 
-	return this->WFComplexClientTask::message_in();
+	auto *conn = (MyConnection *)this->get_connection();
+	switch (conn->state)
+	{
+	case ST_AUTH_REQUEST:
+		resp = new MySQLAuthResponse;
+		break;
+
+	case ST_CHARSET_REQUEST:
+		resp = new MySQLResponse;
+		break;
+
+	case ST_FIRST_USER_REQUEST:
+	case ST_USER_REQUEST:
+		resp = (MySQLResponse *)this->WFComplexClientTask::message_in();
+		break;
+
+	default:
+		assert(0);
+		return NULL;
+	}
+
+	return resp;
+}
+
+int ComplexMySQLTask::check_handshake()
+{
+	auto *resp = (MySQLHandshakeResponse *)this->get_message_in();
+
+	if (resp->host_disallowed())
+	{
+		this->resp = std::move(*(MySQLResponse *)resp);
+		state_ = WFT_STATE_TASK_ERROR;
+		error_ = WFT_ERR_MYSQL_HOST_NOT_ALLOWED;
+		return 0;
+	}
+
+	auto *conn = this->get_connection();
+	auto *my_conn = new MyConnection;
+
+	my_conn->mysql_seqid = resp->get_seqid() + 1;
+	resp->get_challenge(my_conn->challenge);
+	my_conn->state = ST_AUTH_REQUEST;
+	conn->set_context(my_conn, [](void *ctx) {
+		delete (MyConnection *)ctx;
+	});
+
+	return MYSQL_KEEPALIVE_DEFAULT;
 }
 
 int ComplexMySQLTask::keep_alive_timeout()
 {
-	long long seqid = this->get_seq();
+	state_ = WFT_STATE_SUCCESS;
+	error_ = 0;
+	if (this->get_seq() == 0)
+		return check_handshake();
 
-	if (seqid == 0)
+	auto *conn = (MyConnection *)this->get_connection();
+	auto *msg = (ProtocolMessage *)this->get_message_in();
+	MySQLResponse *resp;
+
+	resp = (MySQLResponse *)msg;
+	switch (conn->state)
 	{
-		auto *resp = static_cast<MySQLHandshakeResponse *>(this->get_message_in());
-
-		if (resp->host_disallowed())
+	case ST_AUTH_REQUEST:
+		if (!resp->is_ok_packet())
 		{
-			this->resp = std::move(*static_cast<MySQLResponse *>(resp));
+			this->resp = std::move(*resp);
+			state_ = WFT_STATE_TASK_ERROR;
+			error_ = WFT_ERR_MYSQL_ACCESS_DENIED;
 			return 0;
 		}
+
+		if (res_charset_.size() != 0)
+			conn->state = ST_CHARSET_REQUEST;
 		else
-		{
-			auto *ctx = new handshake_ctx();
-			auto *conn = this->get_connection();
+			conn->state = ST_FIRST_USER_REQUEST;
 
-			ctx->mysql_seqid = resp->get_seqid() + 1;
-			resp->get_challenge(ctx->challenge);
-			conn->set_context(ctx, [](void *ctx) {
-				delete static_cast<handshake_ctx *>(ctx);
-			});
-		}
-	}
-	else if (!is_user_request_)
-	{
-		auto *resp = (MySQLResponse *)this->get_message_in();
+		break;
 
+	case ST_CHARSET_REQUEST:
 		if (!resp->is_ok_packet())
 		{
 			this->resp = std::move(*resp);
@@ -201,9 +271,19 @@ int ComplexMySQLTask::keep_alive_timeout()
 			error_ = WFT_ERR_MYSQL_INVALID_CHARACTER_SET;
 			return 0;
 		}
-	}
-	else
+
+		conn->state = ST_FIRST_USER_REQUEST;
+		break;
+
+	case ST_FIRST_USER_REQUEST:
+		conn->state = ST_USER_REQUEST;
+	case ST_USER_REQUEST:
 		return this->keep_alive_timeo;
+
+	default:
+		assert(0);
+		return 0;
+	}
 
 	return MYSQL_KEEPALIVE_DEFAULT;
 }
