@@ -88,7 +88,7 @@ protected:
 		if (this->callback)
 			this->callback(this);
 
-		delete this;
+		//delete this; //for always use
 		return series->pop();
 	}
 
