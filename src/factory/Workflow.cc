@@ -152,9 +152,9 @@ SubTask *SeriesWork::pop_task()
 
 		if (this->callback)
 			this->callback(this);
-
-		if (!this->in_parallel)
-			delete this;
+		//for always use
+		//if (!this->in_parallel)
+		//	delete this;
 	}
 
 	return task;
