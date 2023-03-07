@@ -149,6 +149,7 @@ SubTask *SeriesWork::pop_task()
 	if (!task)
 	{
 		this->finished = true;
+		this->front = 0;
 
 		if (this->callback)
 			this->callback(this);

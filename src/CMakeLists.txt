@@ -4,7 +4,7 @@ if(ANDROID)
 	include_directories(${OPENSSL_INCLUDE_DIR})
 	link_directories(${OPENSSL_LINK_DIR})
 else()
-	find_package(OpenSSL REQUIRED)
+	# find_package(OpenSSL REQUIRED)
 endif ()
 
 include_directories(${OPENSSL_INCLUDE_DIR} ${INC_DIR}/workflow)
